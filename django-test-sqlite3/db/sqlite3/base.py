@@ -7,12 +7,17 @@ Python 2.5 and later can use a pysqlite2 module or the sqlite3 module in the
 standard library.
 """
 
+import datetime
+import decimal
 import re
 import sys
-import datetime
 
 from django.db import utils
-from django.db.backends import *
+from django.db.backends import (BaseDatabaseOperations,
+                                util,
+                                BaseDatabaseFeatures,
+                                BaseDatabaseWrapper,
+                                BaseDatabaseValidation)
 from django.db.backends.signals import connection_created
 from django.db.backends.sqlite3.client import DatabaseClient
 from creation import DatabaseCreation
@@ -29,7 +34,6 @@ try:
     except ImportError, e1:
         from sqlite3 import dbapi2 as Database
 except ImportError, exc:
-    import sys
     from django.core.exceptions import ImproperlyConfigured
     if sys.version_info < (2, 5, 0):
         module = 'pysqlite2 module'
@@ -57,6 +61,7 @@ if Database.version_info >= (2,4,1):
     # needing it.
     Database.register_adapter(str, lambda s:s.decode('utf-8'))
     Database.register_adapter(SafeString, lambda s:s.decode('utf-8'))
+
 
 class DatabaseFeatures(BaseDatabaseFeatures):
     # SQLite cannot handle us only partially reading from a cursor's result set
@@ -87,6 +92,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
         cursor.execute('DROP TABLE STDDEV_TEST')
         return has_support
 
+
 class DatabaseOperations(BaseDatabaseOperations):
     def date_extract_sql(self, lookup_type, field_name):
         # sqlite doesn't support extract, so we fake it with the user-defined
@@ -99,11 +105,11 @@ class DatabaseOperations(BaseDatabaseOperations):
         # It would be more straightforward if we could use the sqlite strftime
         # function, but it does not allow for keeping six digits of fractional
         # second information, nor does it allow for formatting date and datetime
-        # values differently. So instead we register our own function that 
-        # formats the datetime combined with the delta in a manner suitable 
+        # values differently. So instead we register our own function that
+        # formats the datetime combined with the delta in a manner suitable
         # for comparisons.
-        return  u'django_format_dtdelta(%s, "%s", "%d", "%d", "%d")' % (sql, 
-            connector, timedelta.days, timedelta.seconds, timedelta.microseconds)
+        return u'django_format_dtdelta(%s, "%s", "%d", "%d", "%d")' % \
+            (sql, connector, timedelta.days, timedelta.seconds, timedelta.microseconds)
 
     def date_trunc_sql(self, lookup_type, field_name):
         # sqlite doesn't support DATE_TRUNC, so we fake it with a user-defined
@@ -120,7 +126,7 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def quote_name(self, name):
         if name.startswith('"') and name.endswith('"'):
-            return name # Quoting once is enough.
+            return name  # Quoting once is enough.
         return '"%s"' % name
 
     def no_limit_value(self):
@@ -130,11 +136,11 @@ class DatabaseOperations(BaseDatabaseOperations):
         # NB: The generated SQL below is specific to SQLite
         # Note: The DELETE FROM... SQL generated below works for SQLite databases
         # because constraints don't exist
-        sql = ['%s %s %s;' % \
-                (style.SQL_KEYWORD('DELETE'),
-                 style.SQL_KEYWORD('FROM'),
-                 style.SQL_FIELD(self.quote_name(table))
-                 ) for table in tables]
+        sql = ['%s %s %s;' %
+               (style.SQL_KEYWORD('DELETE'),
+                style.SQL_KEYWORD('FROM'),
+                style.SQL_FIELD(self.quote_name(table))
+                ) for table in tables]
         # Note: No requirement for reset of auto-incremented indices (cf. other
         # sql_flush() implementations). Just return SQL at this point
         return sql
@@ -164,6 +170,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         # No field, or the field isn't known to be a decimal or integer
         return value
 
+
 class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'sqlite'
     # SQLite requires LIKE statements to include an ESCAPE clause if the value
@@ -190,7 +197,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
         self.features = DatabaseFeatures(self)
-        self.ops = DatabaseOperations()
+        self.ops = DatabaseOperations(self)
         self.client = DatabaseClient(self)
         self.creation = DatabaseCreation(self)
         self.introspection = DatabaseIntrospection(self)
@@ -233,6 +240,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
 FORMAT_QMARK_REGEX = re.compile(r'(?![^%])%s')
 
+
 class SQLiteCursorWrapper(Database.Cursor):
     """
     Django uses "format" style placeholders, but pysqlite2 uses "qmark" style.
@@ -260,6 +268,7 @@ class SQLiteCursorWrapper(Database.Cursor):
     def convert_query(self, query):
         return FORMAT_QMARK_REGEX.sub('?', query).replace('%%','%')
 
+
 def _sqlite_extract(lookup_type, dt):
     if dt is None:
         return None
@@ -272,6 +281,7 @@ def _sqlite_extract(lookup_type, dt):
     else:
         return getattr(dt, lookup_type)
 
+
 def _sqlite_date_trunc(lookup_type, dt):
     try:
         dt = util.typecast_timestamp(dt)
@@ -283,6 +293,7 @@ def _sqlite_date_trunc(lookup_type, dt):
         return "%i-%02i-01 00:00:00" % (dt.year, dt.month)
     elif lookup_type == 'day':
         return "%i-%02i-%02i 00:00:00" % (dt.year, dt.month, dt.day)
+
 
 def _sqlite_format_dtdelta(dt, conn, days, secs, usecs):
     try:
@@ -302,6 +313,7 @@ def _sqlite_format_dtdelta(dt, conn, days, secs, usecs):
     else:
         rv = dt.strftime("%Y-%m-%d")
     return rv
+
 
 def _sqlite_regexp(re_pattern, re_string):
     import re

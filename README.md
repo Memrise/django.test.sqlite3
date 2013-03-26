@@ -1,9 +1,18 @@
+# Forked
+
+This repo has been forked from:
+
+https://github.com/disdanes/django.test.sqlite3
+
+And updated to work with django 1.4
+
 ##Motivation:
-This is a dropin replacement for the django.db.backends.sqlite3 for use with **TESTING**. 
+
+This is a dropin replacement for the django.db.backends.sqlite3 for use with **TESTING**.
 
 It solves the problem of testing code where models could be queried from multiple slaves or databases. Django provides a TEST_MIRROR setting, but it does not work correctly with in memory sqlite databases.
 
-This is not intended to be used in production (although it might be able to)
+This is not intended to be used in production (although it might be able to).
 
 
 ##Usage:
@@ -25,7 +34,7 @@ if 'test' in sys.argv:
 		'slave1': {
 			'ENGINE' : TEST_ENGINE,
 		}
-	} 
+	}
 </pre>
 
 ## Problem:
