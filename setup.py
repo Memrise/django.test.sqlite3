@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 version = '0.1'
 
 setup(
-    name='django-test-sqlite3',
+    name='django_test_sqlite3',
     version=version,
     description="Django testing with sqlite3 for replica databases",
     long_description="""\
