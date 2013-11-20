@@ -70,7 +70,8 @@ class DatabaseCreation(BaseDatabaseCreation):
         self.connection.settings_dict["NAME"] = test_database_name
 
         # Confirm the feature set of the test database
-        self.connection.features.confirm()
+        if hasattr(self.connection.features, 'confirm'):
+            self.connection.features.confirm()
 
         # Report syncdb messages at one level lower than that requested.
         # This ensures we don't get flooded with messages during testing
